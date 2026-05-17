@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Chess Game Coach</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <main>
+    <header>
+      <h1>♟️ Chess Coach Replay</h1>
+      <p class="sub">Visual-first game review with Gemini fallback tiers and spaced-repetition puzzles.</p>
+    </header>
+
+    <section class="controls card">
+      <h2>1) Load PGN</h2>
+      <label for="pgnFile">Upload PGN file</label>
+      <input id="pgnFile" type="file" accept=".pgn,text/plain" />
+      <label for="pgnInput">or paste PGN</label>
+      <textarea id="pgnInput" rows="6" placeholder="Paste PGN here..."></textarea>
+      <div class="inline">
+        <label for="playerSide">Your side</label>
+        <select id="playerSide">
+          <option value="white">White</option>
+          <option value="black">Black</option>
+        </select>
+        <button id="analyzeBtn">Analyze Game</button>
+      </div>
+    </section>
+
+    <section class="settings card">
+      <h2>2) Gemini Settings</h2>
+      <label for="apiKey">Gemini API key</label>
+      <input id="apiKey" type="password" placeholder="AIza..." />
+      <label for="modelTierList">Model tier list (best ➜ fallback, one per line or comma-separated)</label>
+      <textarea id="modelTierList" rows="4" placeholder="gemini-2.5-pro\ngemini-2.5-flash"></textarea>
+      <button id="saveSettingsBtn" class="secondary">Save Settings</button>
+      <p id="statusLine" class="status"></p>
+    </section>
+
+    <section class="review card">
+      <h2>3) Replay + Coach</h2>
+      <div id="coachChat" class="coach" aria-live="polite">
+        <div class="coach-avatar">🧠</div>
+        <div class="coach-message" id="coachMessage">Load a game to begin.</div>
+      </div>
+      <div class="board-wrap">
+        <div id="board" class="board" aria-label="Chess board"></div>
+        <svg id="arrowLayer" class="arrow-layer" viewBox="0 0 800 800" preserveAspectRatio="none"></svg>
+      </div>
+      <div class="inline">
+        <button id="prevBtn" class="secondary">◀ Prev</button>
+        <button id="nextBtn">Next ▶</button>
+        <button id="playBtn" class="secondary">Auto Play</button>
+        <span id="moveLabel">Move 0/0</span>
+      </div>
+      <ul id="moveTimeline" class="timeline"></ul>
+    </section>
+
+    <section class="puzzles card">
+      <h2>4) Puzzle Flashcards</h2>
+      <div class="inline">
+        <button id="generatePuzzlesBtn">Generate puzzles from this game</button>
+        <button id="exportPuzzlesBtn" class="secondary">Export</button>
+        <input id="importPuzzlesInput" type="file" accept="application/json" />
+      </div>
+      <div id="puzzleDeck"></div>
+    </section>
+  </main>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

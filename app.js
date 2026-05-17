@@ -62,11 +62,10 @@ el.pgnFile.addEventListener("change", async (ev) => {
 
 el.saveSettingsBtn.addEventListener("click", () => {
   const settings = {
-    apiKey: el.apiKey.value.trim(),
     models: parseModelTierList(el.modelTierList.value),
   };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-  setStatus(`Saved ${settings.models.length} model tier(s).`);
+  setStatus(`Saved ${settings.models.length} model tier(s). API key stays only in this browser tab.`);
 });
 
 el.analyzeBtn.addEventListener("click", async () => {
@@ -159,7 +158,8 @@ async function loadAndAnalyzeGame(pgn, side) {
 async function analyzeMovesWithGemini(verboseMoves, side) {
   const settings = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
   const models = settings.models?.length ? settings.models : parseModelTierList(el.modelTierList.value);
-  if (!settings.apiKey || !models.length) return fallbackAnalysis(verboseMoves);
+  const apiKey = el.apiKey.value.trim();
+  if (!apiKey || !models.length) return fallbackAnalysis(verboseMoves);
 
   const prompt = `You are a funny but insightful chess coach. Analyze this game from ${side} perspective.
 Return STRICT JSON array with one object per ply:
@@ -169,7 +169,7 @@ Game SAN moves: ${verboseMoves.map((m) => m.san).join(" ")}`;
   let lastError = "";
   for (const model of models) {
     try {
-      const text = await callGemini(model, settings.apiKey, prompt);
+      const text = await callGemini(model, apiKey, prompt);
       const parsed = JSON.parse(text);
       if (!Array.isArray(parsed)) throw new Error("Invalid response payload");
       return parsed;
@@ -190,8 +190,9 @@ async function generatePuzzles() {
   const fallbackCards = weak.slice(0, 12).map((item, idx) => makePuzzleFromAnalysis(item, state.positions[item.ply - 1] || state.positions[0], idx));
 
   const settings = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
+  const apiKey = el.apiKey.value.trim();
   const models = settings.models || [];
-  if (!settings.apiKey || !models.length) return fallbackCards;
+  if (!apiKey || !models.length) return fallbackCards;
 
   const prompt = `Generate ${Math.min(24, Math.max(8, weak.length * 2))} chess puzzle flashcards as STRICT JSON array.
 Fields per card: id, fen, question, bestMove, explanation, wrongMoves([{move,whyWrong}]), difficulty, intervalDays, dueAt.
@@ -199,7 +200,7 @@ Use these weak moments: ${JSON.stringify(weak.slice(0, 20))}`;
 
   for (const model of models) {
     try {
-      const text = await callGemini(model, settings.apiKey, prompt);
+      const text = await callGemini(model, apiKey, prompt);
       const parsed = safeParsePuzzles(text);
       return parsed;
     } catch (e) {
@@ -313,7 +314,15 @@ function renderTimeline() {
   state.moves.forEach((m, i) => {
     const a = state.analyses[i] || {};
     const li = document.createElement("li");
-    li.innerHTML = `<span class="badge ${a.classification || "good"}">${a.classification || "good"}</span><strong>${i + 1}. ${m.san}</strong> ${a.altMove ? `↪ alt: ${a.altMove}` : ""}`;
+    const badge = document.createElement("span");
+    badge.className = `badge ${a.classification || "good"}`;
+    badge.textContent = a.classification || "good";
+    const move = document.createElement("strong");
+    move.textContent = `${i + 1}. ${m.san}`;
+    li.append(badge, move);
+    if (a.altMove) {
+      li.append(document.createTextNode(` ↪ alt: ${a.altMove}`));
+    }
     li.addEventListener("click", () => goToPly(i + 1));
     el.moveTimeline.appendChild(li);
   });
@@ -327,7 +336,17 @@ function renderPuzzles() {
   state.puzzles.slice(0, 25).forEach((p, idx) => {
     const card = document.createElement("div");
     card.className = "deck-card";
-    card.innerHTML = `<div><strong>${p.question}</strong></div><small>${p.difficulty || "mixed"} • due ${new Date(p.dueAt).toLocaleString()}</small><div>Best: ${p.bestMove}</div><div>${p.explanation}</div>`;
+    const q = document.createElement("div");
+    const qStrong = document.createElement("strong");
+    qStrong.textContent = p.question;
+    q.appendChild(qStrong);
+    const meta = document.createElement("small");
+    meta.textContent = `${p.difficulty || "mixed"} • due ${new Date(p.dueAt).toLocaleString()}`;
+    const best = document.createElement("div");
+    best.textContent = `Best: ${p.bestMove}`;
+    const exp = document.createElement("div");
+    exp.textContent = p.explanation;
+    card.append(q, meta, best, exp);
     const row = document.createElement("div");
     row.className = "inline";
     ["again", "hard", "good", "easy"].forEach((q) => {
@@ -360,7 +379,6 @@ function setStatus(message) {
 
 function loadSettings() {
   const settings = JSON.parse(localStorage.getItem(STORAGE_KEY) || "{}");
-  if (settings.apiKey) el.apiKey.value = settings.apiKey;
   if (Array.isArray(settings.models)) el.modelTierList.value = settings.models.join("\n");
 }
 
